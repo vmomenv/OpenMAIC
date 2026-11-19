@@ -251,6 +251,9 @@ importers:
       katex:
         specifier: 0.16.38
         version: 0.16.38
+      ldapts:
+        specifier: ^9.3.1
+        version: 9.3.1
       linkedom:
         specifier: ^0.18.13
         version: 0.18.13(canvas@3.2.3)
@@ -9909,6 +9912,10 @@ packages:
   layout-base@2.0.1:
     resolution: {integrity: sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==}
 
+  ldapts@9.3.1:
+    resolution: {integrity: sha512-MiClSiwcoAuI2I/63N+fotWZvnATkbpRsKzUzhSjqhY9bk6UmMevhZBRjO1GtpX/PbeRpOKs4W9P8Do6284Bqw==}
+    engines: {node: '>=22'}
+
   lead@4.0.0:
     resolution: {integrity: sha512-DpMa59o5uGUWWjruMp71e6knmwKU3jRBBn1kjuLWN9EeIOxNeSAwvHf03WIl8g/ZMR2oSQC9ej3yeLBwdDc/pg==}
     engines: {node: '>=10.13.0'}
@@ -12339,6 +12346,9 @@ packages:
 
   streamx@2.23.0:
     resolution: {integrity: sha512-kn+e44esVfn2Fa/O0CPFcex27fjIL6MkVae0Mm6q+E6f0hWv578YCERbv+4m02cjxvDsPKLnmxral/rR6lBMAg==}
+
+  strict-event-emitter-types@2.0.0:
+    resolution: {integrity: sha512-Nk/brWYpD85WlOgzw5h173aci0Teyv8YdIAEtV+N88nDB0dLlazZyJMIsN6eo1/AR61l+p6CJTG1JIyFaoNEEA==}
 
   strict-event-emitter@0.5.1:
     resolution: {integrity: sha512-vMgjE/GGEPEFnhFub6pa4FmJBRBVOLpIII2hvCZ8Kzb7K0hlHo7mQv6xYrBvCL2LtAIBwFUK8wvuJgTVSQ5MFQ==}
@@ -23974,6 +23984,10 @@ snapshots:
 
   layout-base@2.0.1: {}
 
+  ldapts@9.3.1:
+    dependencies:
+      strict-event-emitter-types: 2.0.0
+
   lead@4.0.0: {}
 
   level-blobs@0.1.7:
@@ -27085,6 +27099,8 @@ snapshots:
     transitivePeerDependencies:
       - bare-abort-controller
       - react-native-b4a
+
+  strict-event-emitter-types@2.0.0: {}
 
   strict-event-emitter@0.5.1: {}
 
