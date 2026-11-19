@@ -296,6 +296,28 @@ async function validateBootConfiguration(): Promise<void> {
   // to load is reported as a startup failure, with its stack.
   const { runConfigurationCheck } = await import('@/lib/server/boot-configuration-error');
 
+  // LDAP accounts are a deployment-wide identity mode: register the method
+  // before any owner is resolved, and refuse to start with an incomplete
+  // directory configuration rather than failing every login at request time.
+  const { ldapEnabled, readLdapConfig, validateLdapConfiguration } =
+    await import('@/lib/server/identity/ldap/config');
+  if (ldapEnabled()) {
+    runConfigurationCheck(validateLdapConfiguration);
+    const config = readLdapConfig();
+    const { createLdapAuthMethod } = await import('@/lib/server/identity/ldap/auth-method');
+    const { configureOwnerAuthentication } = await import('@/lib/server/identity');
+    runConfigurationCheck(() =>
+      configureOwnerAuthentication({
+        methods: [createLdapAuthMethod({ config })],
+        anonymousFallback: false,
+      }),
+    );
+  } else if (process.env.LDAP_URL?.trim()) {
+    console.warn(
+      '[ldap] LDAP_URL is set but NEXT_PUBLIC_LDAP_ENABLED is not true; LDAP login is disabled',
+    );
+  }
+
   // The database, before anything else: every course, chat and asset lives in
   // it and there is no browser-storage fallback, so a server without one would
   // boot, pass its health check and then fail every persistence request. The

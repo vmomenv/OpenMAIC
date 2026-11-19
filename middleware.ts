@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { isAgentRuntimeConfigured, isWorkbenchEnabled } from '@/lib/config/feature-flags';
 import { verifyAccessTokenEdge } from '@/lib/server/access-token-edge';
+import { ldapEnabled } from '@/lib/server/identity/ldap/config';
+import {
+  decodeLdapSessionPayload,
+  LDAP_SESSION_COOKIE,
+} from '@/lib/server/identity/ldap/session-shared';
 import {
   anonymousOwnerForNavigation,
+  isDocumentNavigation,
   type NavigationIdentity,
 } from '@/lib/server/identity/navigation';
 
@@ -48,31 +54,69 @@ export async function middleware(request: NextRequest) {
   });
 
   const accessCode = process.env.ACCESS_CODE;
-  if (!accessCode) {
-    return next(request, identity);
+  if (accessCode) {
+    // Whitelist: access-code endpoints, health check
+    if (!pathname.startsWith('/api/access-code/') && pathname !== '/api/health') {
+      // Check cookie — validate HMAC signature, not just existence
+      const cookie = request.cookies.get('openmaic_access');
+      if (!(cookie?.value && (await verifyAccessTokenEdge(cookie.value, accessCode)))) {
+        // API requests without valid cookie → 401
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            { success: false, errorCode: 'INVALID_REQUEST', error: 'Access code required' },
+            { status: 401 },
+          );
+        }
+        // Page requests → let through, frontend shows modal
+      }
+    }
   }
 
-  // Whitelist: access-code endpoints, health check
-  if (pathname.startsWith('/api/access-code/') || pathname === '/api/health') {
-    return next(request, identity);
+  // LDAP accounts: page navigations without a live session go to /login, and
+  // every other request that is not the login/logout surface is refused. The
+  // signature is checked by the owner auth method in Node; here only the
+  // payload and expiry are read, because middleware may run in the Edge
+  // runtime where the signing secret is not available.
+  const ldapResponse = ldapGate(request);
+  if (ldapResponse) return ldapResponse;
+
+  return next(request, identity);
+}
+
+const LDAP_PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/health'];
+
+function ldapGate(request: NextRequest): NextResponse | undefined {
+  if (!ldapEnabled()) return undefined;
+  const { pathname } = request.nextUrl;
+  if (LDAP_PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/api/access-code/')) {
+    return undefined;
   }
 
-  // Check cookie — validate HMAC signature, not just existence
-  const cookie = request.cookies.get('openmaic_access');
-  if (cookie?.value && (await verifyAccessTokenEdge(cookie.value, accessCode))) {
-    return next(request, identity);
-  }
+  const token = request.cookies.get(LDAP_SESSION_COOKIE)?.value;
+  if (token && decodeLdapSessionPayload(token)) return undefined;
 
-  // API requests without valid cookie → 401
   if (pathname.startsWith('/api/')) {
     return NextResponse.json(
-      { success: false, errorCode: 'INVALID_REQUEST', error: 'Access code required' },
+      { success: false, errorCode: 'INVALID_CREDENTIAL', error: 'authentication required' },
       { status: 401 },
     );
   }
 
-  // Page requests → let through, frontend shows modal
-  return next(request, identity);
+  // An expired session in an open tab should land on the login form; an RSC
+  // fetch or Server Action gets a plain refusal instead of an HTML redirect.
+  if (
+    !isDocumentNavigation({
+      method: request.method,
+      headers: request.headers,
+      pathname,
+    })
+  ) {
+    return new NextResponse('Authentication required', { status: 401 });
+  }
+
+  const login = new URL('/login', request.url);
+  login.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(login);
 }
 
 export const config = {
