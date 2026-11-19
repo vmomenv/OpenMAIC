@@ -50,6 +50,7 @@ yarn-error.log*
 # env files
 .env*
 !.env.example
+!.env.local.example
 
 # server provider config (contains API keys)
 server-providers.yml

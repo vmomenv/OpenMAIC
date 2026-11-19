@@ -1,0 +1,33 @@
+# =============================================================================
+# openmaic.yml — server-managed models, fixed for every user
+#
+# Copy this file to openmaic.yml (the repository root, or the path named by
+# OPENMAIC_CONFIG) and put the provider key in .env.local. Restart afterwards.
+#
+# `lock: all` fixes every model slot: nobody can change a model in the web UI,
+# and `allowUserKeys: false` removes the "add a provider / connect a token
+# plan" surfaces. The browser still shows the course model map, read-only.
+#
+# This template exercises chat and course generation only. Add the optional
+# providers and slots you have keys for (image, video, tts, webSearch) before
+# `lock: all` turns the rest off.
+# =============================================================================
+
+providers:
+  openai:
+    preset: openai
+    apiKey: ${OPENAI_API_KEY}
+    models: [gpt-5.5]
+    # baseUrl: ${OPENAI_BASE_URL}   # an OpenAI-compatible gateway
+
+slots:
+  llm: openai:gpt-5.5
+  course.outline: openai:gpt-5.5
+  course.content: openai:gpt-5.5
+  agent: openai:gpt-5.5
+
+# Every slot is fixed by the administrator, with its whole subtree.
+lock: all
+
+# Users may not add providers, keys or token plans of their own.
+allowUserKeys: false
